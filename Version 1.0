@@ -1,0 +1,380 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+public enum TokenType
+{
+	Error,
+	Nada,
+	OpenTag,
+	CloseTag,
+	TextTag,
+	DirectoryTag,
+	Text,
+	Directory,
+	OpenId,
+	CloseId,
+	OpenClass,
+	CloseClass,
+	Seletor,
+	Tag
+}
+
+public class Token
+{
+	public TokenType Type { get; }
+	public string Lexeme { get; }
+	public int IndentationLevel { get; }
+
+	public Token(TokenType type, string lexeme, int indentationLevel)
+	{
+		Type = type;
+		Lexeme = lexeme;
+		IndentationLevel = indentationLevel;
+	}
+
+	public override string ToString() => $"{new string(' ', IndentationLevel * 4)}({Type}, '{Lexeme}')";
+}
+
+public class Lexer
+{
+	private readonly List<Token> tokens = new List<Token>();
+	private readonly List<string> tagsAbertas = new List<string>();
+	private int currentIndentationLevel = 0;
+	string tagText = "";
+	string tagDirectory = "";
+	string textoTag = "";
+	string textoDiretorio = "";
+	string seletorId = "";
+	string seletorClass = "";
+	bool text = false;
+	bool directory = false;
+	bool selectorId = false;
+	bool selectorClass = false;
+
+	public List<Token> Tokenize(string input)
+	{
+		string pattern = @"\b\w+\b|[!(){}\[\]:;, ]";
+		MatchCollection matches = Regex.Matches(input, pattern);
+
+		foreach (Match match in matches)
+		{
+			Group group = match.Groups[0];
+			TokenType type = GetTokenType(group.Value);
+			tokens.Add(new Token(type, group.Value, currentIndentationLevel));
+		}
+
+		return tokens;
+	}
+
+	private TokenType GetTokenType(string lexeme)
+	{
+		if (selectorId)
+		{
+			switch (lexeme)
+			{
+				case ")":
+					seletorId = " id='" + seletorId + "'";
+					selectorId = false;
+					return TokenType.CloseId;
+				default:
+					seletorId = seletorId + lexeme;
+					return TokenType.Seletor;
+			}
+		}
+		else if (selectorClass)
+		{
+			switch (lexeme)
+			{
+				case "]":
+					seletorClass = " class='" + seletorClass + "'";
+					selectorClass = false;
+					return TokenType.CloseClass;
+				default:
+					seletorClass = seletorClass + lexeme;
+					return TokenType.Seletor;
+			}
+		}
+		else if (directory)
+		{
+			switch (lexeme)
+			{
+				case "!":
+					if (tagDirectory == "a")
+					{
+						Console.WriteLine($"<a href='{textoDiretorio}'{seletorId}{seletorClass}>{textoTag}</a>");
+						textoTag = "";
+					}
+					else
+					{
+						Console.WriteLine($"<{tagDirectory} src='{textoDiretorio}'{textoDiretorio}'{seletorId}{seletorClass}>");
+					}
+					seletorId = "";
+					seletorClass = "";
+					textoDiretorio = "";
+					directory = false;
+					return TokenType.CloseTag;
+				default:
+					textoDiretorio = textoDiretorio + lexeme;
+					return TokenType.Directory;
+			}
+		}
+		else if (text == false)
+		{
+			switch (lexeme)
+			{
+				case "html":
+					Console.WriteLine("<!DOCTYPE html>");
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "head":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "body":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "header":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "div":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "footer":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "aside":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "section":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "nav":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "main":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "span":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "ul":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "ol":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "li":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "article":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "figure":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "dl":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "table":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "thead":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "tbody":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "tfoot":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+				case "tr":
+					tagsAbertas.Add(lexeme);
+					return TokenType.Tag;
+
+
+
+				case "title":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "p":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "dt":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "dd":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h1":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h2":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h3":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h4":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h5":
+					tagText = lexeme;
+					return TokenType.TextTag;
+				case "h6":
+					tagText = lexeme;
+					return TokenType.TextTag;
+					
+
+				case "img":
+					tagDirectory = lexeme;
+					return TokenType.DirectoryTag;
+				case "audio":
+					tagDirectory = lexeme;
+					return TokenType.DirectoryTag;
+					
+					
+				case "a":
+					tagDirectory = lexeme;
+					return TokenType.DirectoryTag;
+
+
+				case "!":
+					directory = true;
+					return TokenType.OpenTag;
+				case ":":
+					text = true;
+					return TokenType.OpenTag;
+				case "{":
+					Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}<{tagsAbertas[tagsAbertas.Count - 1]}{seletorId}{seletorClass}>");
+					if (tagsAbertas[tagsAbertas.Count - 1] == "head")
+					{
+						Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}    <meta charset='UTF-8'>");
+						Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}    <meta name='viewport' content= 'width= device-width'>");
+					}
+					seletorId = "";
+					seletorClass = "";
+					currentIndentationLevel++;
+					return TokenType.OpenTag;
+				case "}":
+					currentIndentationLevel--;
+
+					if (tagsAbertas.Count > 0)
+					{
+						Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}</{tagsAbertas[tagsAbertas.Count - 1]}>");
+						tagsAbertas.RemoveAt(tagsAbertas.Count - 1);
+					}
+					return TokenType.CloseTag;
+				case "(":
+					selectorId = true;
+					return TokenType.OpenId;
+				case "[":
+					selectorClass = true;
+					return TokenType.OpenClass;
+
+
+				case " ":
+					return TokenType.Nada;
+				default:
+					Console.ForegroundColor = ConsoleColor.Red;
+					Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}//Erro na linha, verifique a Análise Léxica!!!");
+					Console.ForegroundColor = ConsoleColor.Green;
+					return TokenType.Error;
+			}
+		}
+		else
+		{
+			switch (lexeme)
+			{
+				case ";":
+					if (tagDirectory != "a")
+					{
+						Console.WriteLine($"{new string(' ', currentIndentationLevel * 4)}<{tagText}{seletorId}{seletorClass}>{textoTag}</{tagText}>");
+						textoTag = "";
+					}
+					seletorId = "";
+					seletorClass = "";
+					text = false;
+					return TokenType.CloseTag;
+				case " " when textoTag.Length > 0:
+					textoTag = textoTag + lexeme;
+					return TokenType.Text;
+				default:
+					textoTag = textoTag + lexeme;
+					return TokenType.Text;
+
+			}
+		}
+	}
+}
+
+class Program
+{
+	static void Main()
+	{
+		Console.WriteLine("Escreva o código");
+		string input = "";
+		while (true)
+		{
+			string line = Console.ReadLine();
+
+			if (string.IsNullOrWhiteSpace(line)) // Verifica se a linha está vazia ou contém apenas espaços em branco
+				break; // Sai do loop se Enter for pressionado sem inserir texto
+
+			input += line + Environment.NewLine; // Adiciona a linha ao texto de entrada
+		}
+
+		Lexer lexer = new Lexer();
+
+		Console.WriteLine("\n\n\nResultado do código: \n\n");
+		Console.ForegroundColor = ConsoleColor.Green;
+		List<Token> tokens = lexer.Tokenize(input);
+		Console.ResetColor();
+
+		Console.WriteLine("\n\n\nEscolha uma opção: \n'A' para ver a análise léxica, \n'C' para ver o Console de Erros, \n'N' para não ver nada.");
+		string resp;
+
+		do
+		{
+			resp = Console.ReadLine()?.ToUpper() ?? "";
+
+			switch (resp)
+			{
+				case "A":
+					Console.WriteLine("\nResultado da análise léxica: \n\n");
+					foreach (Token token in tokens)
+					{
+						if (token.Type != TokenType.Nada)
+						{
+							Console.WriteLine(token);
+						}
+					}
+					Console.WriteLine("\nPrograma Encerrado.");
+					break;
+				case "C":
+					Console.WriteLine("\nConsole de Erros: \n");
+					if (tokens.Any(token => token.Type == TokenType.Error))
+					{
+						foreach (Token token in tokens)
+						{
+							if (token.Type == TokenType.Error)
+								Console.WriteLine(token);
+						}
+					}
+					else
+					{
+						Console.WriteLine("    Não ocorreu erros!");
+						Console.WriteLine("\nPrograma Encerrado.");
+					}
+					break;
+
+				case "N":
+					Console.WriteLine("\nPrograma Encerrado.");
+					break;
+				default:
+					Console.WriteLine("Opção inválida. Digite 'A' ou 'C' ou 'N'");
+					break;
+			}
+		} while (resp != "A" && resp != "C" && resp != "N");
+	}
+}
